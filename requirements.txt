@@ -1,0 +1,9 @@
+flask
+flask-sqlalchemy
+flask-wtf
+gunicorn
+sqlalchemy
+psycopg2-binary
+pydantic==2.13.4
+pydantic-core==2.46.4
+pytest
