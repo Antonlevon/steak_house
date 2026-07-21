@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% block styles %}
+  /* ---- wordmark ---- */
+  .wordmark{display:inline-flex;align-items:center}
+  .wm-text{font-family:"Geist",sans-serif;font-weight:600;font-size:24px;letter-spacing:.22em;fill:var(--bone)}
+  .wm-amp{font-family:"Geist",sans-serif;font-weight:300;font-size:24px;fill:var(--brass)}
+
+  /* ---- nav (glass) ---- */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:var(--z-sticky);
+    backdrop-filter:blur(16px) saturate(1.4);
+    -webkit-backdrop-filter:blur(16px) saturate(1.4);
+    border-bottom:1px solid rgba(255,255,255,0.07);
+    background:rgba(0,0,0,.02);}
+  .nav-inner{height:74px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-6)}
+  .nav-links{display:flex;align-items:center;gap:var(--space-8)}
+  .nav-links > a:not(.nav-cta){font-family:"Geist Mono",monospace;font-size:var(--text-xs);letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);
+    position:relative;padding-block:.4rem;transition:color var(--dur) var(--ease-out)}
+  .nav-links > a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--brass);transition:width var(--dur) var(--ease-out)}
+  .nav-links > a:not(.nav-cta):hover{color:var(--bone)}
+  .nav-links > a:not(.nav-cta):hover::after{width:100%}
+  .nav-cta{padding:.65rem 1.2rem}
+  @media (max-width:720px){
+    .nav-links{gap:var(--space-4)}
+    .nav-links > a:not(.nav-cta){display:none}
+  }
+
+  /* ---- loader bar ---- */
+  #loading-bar-wrap{position:fixed;top:0;left:0;right:0;z-index:9999;height:2px;pointer-events:none}
+  #loading-bar{height:100%;width:0%;background:var(--brass);border-radius:0 2px 2px 0;
+    transition:width .38s cubic-bezier(.4,0,.2,1),opacity .4s ease}
+
+  /* ---- loader overlay ---- */
+  #loader-overlay{
+    position:fixed;inset:0;z-index:9000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--ink);
+    transition:opacity .85s var(--ease-out),visibility .85s var(--ease-out);
+  }
+  #loader-overlay.out{opacity:0;visibility:hidden}
+  .loader-mark{margin-bottom:var(--space-8);animation:loaderFadeIn .7s var(--ease-out) both}
+  .loader-dots{display:flex;gap:10px}
+  .loader-dot{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--brass);opacity:.2;
+    animation:dotPulse 1.4s ease-in-out infinite;
+  }
+  .loader-dot:nth-child(2){animation-delay:.22s}
+  .loader-dot:nth-child(3){animation-delay:.44s}
+  @keyframes dotPulse{0%,100%{opacity:.18;transform:scale(.75)}50%{opacity:1;transform:scale(1.3)}}
+  @keyframes loaderFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---- scroll hero ---- */
+  #scroll-hero{position:relative;height:calc(1500px + 100vh)}
+  #hero-sticky{
+    position:sticky;top:0;height:100svh;width:100%;
+    overflow:hidden;background:var(--ink);isolation:isolate;
+    display:flex;flex-direction:column;justify-content:flex-end;
+    will-change:clip-path;
+  }
+  #hero-video{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:center;
+    pointer-events:none;will-change:transform;transform-origin:center;
+  }
+  .hero-overlay{
+    position:absolute;inset:0;z-index:1;
+    background:linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(0,0,0,0) 44%,rgba(0,0,0,.70) 100%);
+  }
+  .hero-inner{position:relative;z-index:2;display:flex;flex-direction:column;gap:var(--space-6);padding-block:var(--space-12) var(--space-16)}
+  .hero-title{font-size:var(--text-3xl);font-weight:300;letter-spacing:-.045em;line-height:1.08;display:flex;flex-wrap:wrap;gap:0 .35em;margin-block:var(--space-2)}
+  .hero-title .line{display:inline-block}
+  .hero-title .accent{color:var(--brass);font-weight:400}
+  .hero-lede{max-width:46ch;font-size:var(--text-lg);color:var(--bone-dim);font-weight:300;line-height:1.55}
+  .hero-actions{display:flex;flex-wrap:wrap;gap:var(--space-4);margin-top:var(--space-2)}
+  .hero-scroll{
+    position:relative;z-index:2;
+    display:flex;flex-direction:column;align-items:center;gap:var(--space-3);
+    color:var(--bone-dim);padding-bottom:var(--space-8);
+  }
+  .hero-scroll .mono{font-size:9px;letter-spacing:.3em}
+  .scroll-line{width:1px;height:46px;background:linear-gradient(var(--brass),transparent);animation:scrollpulse 2.4s var(--ease-out) infinite}
+  @keyframes scrollpulse{0%,100%{opacity:.3;transform:scaleY(.6)}50%{opacity:1;transform:scaleY(1)}}
+
+  /* hero orchestrated entrance */
+  .hero-el{opacity:0;transform:translateY(22px);
+    transition:opacity var(--dur-slow) var(--ease-out-expo),transform var(--dur-slow) var(--ease-out-expo)}
+  .hero-el.in{opacity:1;transform:none}
+  .hero-el[data-d="0"]{transition-delay:.05s}
+  .hero-el[data-d="1"]{transition-delay:.18s}
+  .hero-el[data-d="2"]{transition-delay:.28s}
+  .hero-el[data-d="3"]{transition-delay:.38s}
+  .hero-el[data-d="4"]{transition-delay:.42s}
+  .hero-el[data-d="5"]{transition-delay:.52s}
+  .hero-el[data-d="6"]{transition-delay:.7s}
+
+  /* ---- tooltip ---- */
+  .tip-wrap{position:relative;display:inline-flex}
+  .tip{
+    pointer-events:none;position:absolute;
+    bottom:calc(100% + 10px);left:50%;
+    transform:translateX(-50%) translateY(5px);
+    white-space:nowrap;padding:5px 13px;border-radius:3px;
+    font-family:"Geist Mono",monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    background:oklch(0.90 0.012 75);color:var(--ink);
+    opacity:0;transition:opacity .18s var(--ease-out),transform .18s var(--ease-out);
+    z-index:99;
+  }
+  .tip::after{
+    content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:oklch(0.90 0.012 75);
+  }
+  .tip-wrap:hover .tip,.tip-wrap:focus-within .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---- sections ---- */
+  .section{padding-block:var(--space-32)}
+  .wrap-seam{max-width:1180px;margin-inline:auto}
+  .sec-head{display:flex;flex-direction:column;gap:var(--space-4);max-width:40ch;margin-bottom:var(--space-16)}
+  .sec-title{font-size:var(--text-2xl);font-weight:400}
+  .sec-sub{color:var(--bone-dim);font-size:var(--text-lg);font-weight:300}
+
+  /* ---- menu (signature cards, 3×2) ---- */
+  .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4.5rem 2.5rem;list-style:none;padding:0;margin:0}
+  @media (max-width:900px){.menu-grid{grid-template-columns:repeat(2,1fr);gap:4rem 2rem}}
+  @media (max-width:560px){.menu-grid{grid-template-columns:1fr;gap:3.5rem}}
+
+  /* card shell */
+  .menu-card{position:relative;display:flex;flex-direction:column;
+    background:linear-gradient(170deg,var(--ink-2) 0%,oklch(0.155 0.007 38) 100%);
+    border:1px solid var(--border);border-radius:2px;overflow:hidden;
+    transition:border-color var(--dur) var(--ease-out),
+               transform var(--dur) var(--ease-out),
+               box-shadow var(--dur) var(--ease-out)}
+  .menu-card:hover{border-color:oklch(0.55 0.060 78 / .7);
+    transform:translateY(-6px);
+    box-shadow:0 24px 48px -20px oklch(0 0 0 / .85),
+               0 0 0 1px oklch(0.55 0.060 78 / .18) inset}
+
+  /* photo */
+  .menu-card-img-wrap{position:relative;overflow:hidden;aspect-ratio:4/3;
+    border-bottom:1px solid var(--border);
+    transition:border-color var(--dur) var(--ease-out)}
+  .menu-card:hover .menu-card-img-wrap{border-bottom-color:oklch(0.55 0.060 78 / .5)}
+  .menu-card-img{width:100%;height:100%;object-fit:cover;
+    transition:transform 700ms var(--ease-out-expo)}
+  .menu-card:hover .menu-card-img{transform:scale(1.06)}
+  /* bottom-edge fade so card body feels anchored */
+  .menu-card-img-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 52%,oklch(0.145 0.006 40 / .65))}
+
+  /* body — flex:1 so all cards share equal height; price pins to bottom via margin-top:auto */
+  .menu-card-body{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;
+    gap:.85rem;padding:1.75rem 1.5rem 1.75rem;
+    position:relative}
+  /* вензельная внутренняя рамка */
+  .menu-card-body::before{content:"";pointer-events:none;
+    position:absolute;inset:10px;
+    border:1px solid oklch(0.42 0.048 78 / .35);
+    border-radius:1px;
+    transition:border-color var(--dur) var(--ease-out)}
+  .menu-card:hover .menu-card-body::before{border-color:oklch(0.55 0.060 78 / .55)}
+
+  /* dish name — Dancing Script */
+  .menu-name{font-family:"Dancing Script",cursive;font-weight:600;
+    font-size:clamp(1.35rem,1.1rem + .9vw,1.75rem);
+    line-height:1.15;letter-spacing:.01em;
+    color:var(--bone);transition:color var(--dur) var(--ease-out)}
+  .menu-card:hover .menu-name{color:var(--brass)}
+
+  /* ornament divider — thin brass rules flanking the cut */
+  .menu-orn{display:flex;align-items:center;justify-content:center;gap:.9rem;width:100%;
+    color:var(--brass);font-size:.68rem;letter-spacing:.26em;text-transform:uppercase}
+  .menu-orn::before,.menu-orn::after{content:"";height:1px;flex:1;max-width:40px}
+  .menu-orn::before{background:linear-gradient(90deg,transparent,var(--brass-dim))}
+  .menu-orn::after{background:linear-gradient(90deg,var(--brass-dim),transparent)}
+  .menu-cut{white-space:nowrap;font-family:"Geist Mono",monospace}
+
+  /* description */
+  .menu-desc{color:var(--bone-dim);font-size:var(--text-sm);font-weight:300;
+    max-width:28ch;line-height:1.7;letter-spacing:.01em}
+
+  /* price — margin-top:auto pins it to the same vertical line across all cards */
+  .menu-price{font-family:"Geist Mono",monospace;font-size:var(--text-sm);
+    color:var(--brass);font-weight:500;letter-spacing:.08em;
+    margin-top:auto;padding-top:.9rem;
+    transition:color var(--dur) var(--ease-out)}
+
+  /* flourish — sits just below price */
+  .menu-flourish{font-size:16px;line-height:1;color:var(--brass-dim);
+    opacity:.65;margin-top:.5rem;
+    transition:color var(--dur) var(--ease-out),opacity var(--dur) var(--ease-out)}
+  .menu-card:hover .menu-flourish{color:var(--brass);opacity:1}
+
+  .menu-foot{margin-top:var(--space-16);text-align:center;color:var(--brass-dim);
+    font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase}
+
+  /* scroll entrance — outer cols drift from their edge, centre rises */
+  .menu-card{opacity:0;transform:translate3d(var(--ex,0),30px,0);
+    transition:opacity 600ms var(--ease-out-expo),transform 600ms var(--ease-out-expo),
+      border-color var(--dur) var(--ease-out),box-shadow var(--dur) var(--ease-out),
+      transform var(--dur) var(--ease-out 0s)}
+  .menu-card.in{opacity:1;transform:translate3d(0,0,0)}
+  .menu-card:nth-child(3n+1){--ex:-30px}
+  .menu-card:nth-child(3n+2){--ex:0}
+  .menu-card:nth-child(3n){--ex:30px}
+  .menu-card:nth-child(1){transition-delay:.04s}
+  .menu-card:nth-child(2){transition-delay:.12s}
+  .menu-card:nth-child(3){transition-delay:.20s}
+  .menu-card:nth-child(4){transition-delay:.18s}
+  .menu-card:nth-child(5){transition-delay:.26s}
+  .menu-card:nth-child(6){transition-delay:.34s}
+  @media (max-width:560px){
+    .menu-card:nth-child(n){--ex:0}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .menu-card{opacity:1!important;transform:none!important}
+  }
+
+  /* ---- story ---- */
+  .story{background:linear-gradient(180deg,var(--ink),oklch(0.165 0.007 35),var(--ink))}
+  .story-grid{display:grid;grid-template-columns:0.4fr 1fr;gap:var(--space-16)}
+  .story-body{display:flex;flex-direction:column;gap:var(--space-6);max-width:60ch}
+  .story-body p{color:var(--bone-dim);font-weight:300}
+  .story-quote{font-size:var(--text-xl);font-weight:300;line-height:1.25;letter-spacing:-.02em;color:var(--bone);
+    border:0;padding:0;margin-bottom:var(--space-2)}
+  .story-stats{display:flex;flex-wrap:wrap;gap:var(--space-12);margin-top:var(--space-8);padding-top:var(--space-8);border-top:1px solid var(--border)}
+  .story-stats > div{position:relative;padding-top:var(--space-3);transition:transform var(--dur) var(--ease-out)}
+  .story-stats > div::before{content:"";position:absolute;top:0;left:0;width:22px;height:2px;background:var(--brass);
+    transition:width var(--dur-slow) var(--ease-out)}
+  .story-stats > div:hover::before{width:44px}
+  .story-stats > div:hover{transform:translateY(-3px)}
+  .story-stats dt{font-size:var(--text-xl);color:var(--brass);font-weight:400;line-height:1;font-variant-numeric:tabular-nums}
+  .story-stats dd{color:var(--bone-dim);font-size:var(--text-xs);letter-spacing:.06em;text-transform:uppercase;margin-top:.5rem;max-width:16ch}
+  @media (max-width:820px){.story-grid{grid-template-columns:1fr;gap:var(--space-6)}}
+
+  /* ---- reserve (live fire) ---- */
+  .reserve{position:relative;overflow:hidden;isolation:isolate}
+  /* heat haze glow that breathes at the base of the section */
+  .reserve::before{content:"";position:absolute;left:50%;bottom:-14%;translate:-50% 0;
+    width:min(760px,90vw);height:60%;z-index:-2;pointer-events:none;
+    background:radial-gradient(60% 80% at 50% 100%,oklch(0.52 0.16 42 / .40),oklch(0.42 0.13 28 / .16) 45%,transparent 72%);
+    filter:blur(14px);animation:heatbreathe 5.5s var(--ease-out) infinite}
+  @keyframes heatbreathe{0%,100%{opacity:.55;transform:scaleY(.94)}50%{opacity:1;transform:scaleY(1.06)}}
+
+  /* ember field — sparks that rise, drift and fade like a fire */
+  .embers{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  .spark{position:absolute;bottom:-8px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;
+    background:radial-gradient(circle,oklch(0.86 0.14 78) 0%,oklch(0.66 0.17 46) 45%,transparent 70%);
+    opacity:0;will-change:transform,opacity;
+    animation:rise var(--dur-s) var(--ease-out-expo) var(--delay) infinite}
+  @keyframes rise{
+    0%{opacity:0;transform:translate3d(0,0,0) scale(.6)}
+    12%{opacity:var(--peak)}
+    70%{opacity:calc(var(--peak) * .5)}
+    100%{opacity:0;transform:translate3d(var(--drift),calc(var(--lift) * -1),0) scale(1)}
+  }
+
+  .reserve-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-4);
+    max-width:38ch;margin-inline:auto}
+  .reserve-title{font-size:var(--text-2xl);font-weight:400}
+  .reserve-sub{color:var(--bone-dim);font-weight:300}
+  .reserve-btn{position:relative;margin-top:var(--space-4);padding:1.05rem 2.4rem;overflow:hidden}
+  /* glancing light sweep on the CTA */
+  .reserve-btn::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(105deg,transparent 30%,oklch(0.92 0.06 80 / .28) 48%,transparent 62%);
+    transform:translateX(-120%);transition:none}
+  .reserve-btn:hover::after{animation:sweep .9s var(--ease-out) forwards}
+  @keyframes sweep{to{transform:translateX(120%)}}
+
+  @media (prefers-reduced-motion:reduce){
+    .reserve::before,.spark{animation:none}
+    .spark{opacity:.5;transform:none}
+    .reserve-btn:hover::after{animation:none}
+  }
+
+  /* ---- visit ---- */
+  .visit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-12)}
+  .visit-col{display:flex;flex-direction:column;gap:var(--space-3);position:relative;padding-top:var(--space-4)}
+  .visit-col::before{content:"";position:absolute;top:0;left:0;width:28px;height:2px;background:var(--brass-dim);
+    transition:width var(--dur-slow) var(--ease-out),background var(--dur) var(--ease-out)}
+  .visit-col:hover::before{width:56px;background:var(--brass)}
+  .visit-label{font-size:var(--text-xs);letter-spacing:.2em;text-transform:uppercase;color:var(--brass)}
+  .visit-text{color:var(--bone-dim);font-weight:300}
+  .visit-link{color:var(--bone);border-bottom:1px solid var(--border);transition:border-color var(--dur) var(--ease-out),color var(--dur) var(--ease-out);padding-bottom:1px}
+  .visit-link:hover{color:var(--brass);border-color:var(--brass)}
+  .visit-note{color:var(--slate);font-size:var(--text-sm);font-weight:300;margin-top:var(--space-2)}
+  .hours{list-style:none;padding:0;display:flex;flex-direction:column;gap:.55rem}
+  .hours li{display:flex;justify-content:space-between;gap:var(--space-6);color:var(--bone-dim);font-weight:300;font-size:var(--text-sm)}
+  .hours .mono{color:var(--bone)}
+  @media (max-width:720px){.visit-grid{grid-template-columns:1fr;gap:var(--space-8)}}
+
+  /* ---- footer ---- */
+  .foot{display:flex;flex-direction:column;align-items:center;gap:var(--space-4);text-align:center;
+    margin-top:var(--space-32);padding-top:var(--space-12);border-top:1px solid var(--border)}
+  .foot-fine{font-size:var(--text-xs);color:var(--bone-dim);letter-spacing:.08em}
+{% endblock %}
+{% block body %}
+
+<!-- ══ Loading bar ══ -->
+<div id="loading-bar-wrap" aria-hidden="true"><div id="loading-bar"></div></div>
+
+<!-- ══ Loader overlay ══ -->
+<div id="loader-overlay" aria-hidden="true">
+  <div class="loader-mark">
+    <svg viewBox="0 0 320 34" role="img" aria-label="Cascade and Coal" height="20" opacity=".88">
+      <text x="0"   y="25" font-family="'Geist',sans-serif" font-weight="600" font-size="24" letter-spacing="5.5" fill="oklch(0.925 0.012 75)">CASCADE</text>
+      <text x="163" y="25" font-family="'Geist',sans-serif" font-weight="300" font-size="24" fill="oklch(0.720 0.085 78)">&amp;</text>
+      <text x="196" y="25" font-family="'Geist',sans-serif" font-weight="600" font-size="24" letter-spacing="5.5" fill="oklch(0.925 0.012 75)">COAL</text>
+    </svg>
+  </div>
+  <div class="loader-dots">
+    <div class="loader-dot"></div>
+    <div class="loader-dot"></div>
+    <div class="loader-dot"></div>
+  </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="wordmark" aria-label="Cascade and Coal, home">
+      <svg viewBox="0 0 320 34" role="img" aria-hidden="true" height="20">
+        <text x="0" y="25" class="wm-text">CASCADE</text>
+        <text x="163" y="25" class="wm-amp">&amp;</text>
+        <text x="196" y="25" class="wm-text">COAL</text>
+      </svg>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#menu">Menu</a>
+      <a href="#story">Story</a>
+      <a href="#visit">Visit</a>
+      <a href="{{ reserve_url }}" target="_blank" rel="noopener" class="btn btn-ghost nav-cta">Reserve</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<div id="scroll-hero">
+  <div id="hero-sticky">
+    <video id="hero-video" src="/static/dropshot.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <div class="hero-overlay" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <p class="eyebrow hero-el" data-d="0">Wood-fired steakhouse · Capitol Hill, Seattle</p>
+      <h1 class="hero-title">
+        <span class="hero-el line" data-d="1">Coal.</span>
+        <span class="hero-el line" data-d="2">Smoke.</span>
+        <span class="hero-el line accent" data-d="3">Fire.</span>
+      </h1>
+      <p class="hero-lede hero-el" data-d="4">
+        Forty days dry-aged, seared over live Cascade alderwood.
+        A dim room, a whiskey list with a memory, and steak that tastes of patience.
+      </p>
+      <div class="hero-actions hero-el" data-d="5">
+        <span class="tip-wrap">
+          <a href="{{ reserve_url }}" target="_blank" rel="noopener" class="btn btn-primary">Reserve a table</a>
+          <span class="tip">Reservations open 30 days out</span>
+        </span>
+        <span class="tip-wrap">
+          <a href="#menu" class="btn btn-ghost">See the cuts</a>
+          <span class="tip">Six cuts from the hearth</span>
+        </span>
+      </div>
+    </div>
+    <div class="hero-scroll hero-el" data-d="6" aria-hidden="true">
+      <span class="mono">SCROLL</span><span class="scroll-line"></span>
+    </div>
+  </div>
+</div>
+
+<hr class="seam wrap-seam">
+
+<!-- ============ FEATURED MENU ============ -->
+<section class="section" id="menu">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="eyebrow">The board · six from the hearth</p>
+      <h2 class="sec-title">Cut, char, and provenance.</h2>
+      <p class="sec-sub">A working sample of the menu — not the whole of it. Beef is dry-aged in-house; everything meets the flame.</p>
+    </div>
+
+    <ul class="menu-grid">
+      {% for item in menu %}
+      <li class="menu-card reveal">
+        {% if item.image %}
+        <div class="menu-card-img-wrap">
+          <img class="menu-card-img" src="{{ item.image }}" alt="{{ item.name }}" loading="lazy">
+        </div>
+        {% endif %}
+        <div class="menu-card-body">
+          <h3 class="menu-name">{{ item.name }}</h3>
+          <div class="menu-orn"><span class="menu-cut mono">{{ item.cut }}</span></div>
+          <p class="menu-desc">{{ item.desc }}</p>
+          <span class="menu-price">{{ item.price }}</span>
+          <span class="menu-flourish" aria-hidden="true">&#10087;</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="menu-foot reveal mono">Aged &amp; sourced within 220 miles where the season allows · Full menu presented at the table</p>
+  </div>
+</section>
+
+<hr class="seam wrap-seam">
+
+<!-- ============ STORY ============ -->
+<section class="section story" id="story">
+  <div class="wrap story-grid">
+    <div class="story-side reveal">
+      <p class="eyebrow">Since 2019 · Est. Capitol Hill</p>
+    </div>
+    <div class="story-body">
+      <blockquote class="story-quote reveal">
+        "We built the room around the fire, not the other way around."
+      </blockquote>
+      <p class="reveal" data-d="1">
+        Cascade &amp; Coal began as a single hearth hauled into a former machine shop on Capitol Hill.
+        The brick still holds the char. We cook over Cascade alderwood and oak coal — no gas, no shortcuts —
+        and let the smoke do the seasoning it has always done.
+      </p>
+      <p class="reveal" data-d="2">
+        Our beef is dry-aged on the bone for forty days in a cabinet you can see from the bar.
+        The result is darker, mineral, unmistakably itself. Around it: Northwest oysters, cast-iron sides,
+        and a whiskey program that reads like a diary. Come hungry, stay late.
+      </p>
+      <dl class="story-stats reveal" data-d="3">
+        <div><dt class="mono">40</dt><dd>days dry-aged, on the bone</dd></div>
+        <div><dt class="mono">100%</dt><dd>live fire — alder &amp; oak coal</dd></div>
+        <div><dt class="mono">220</dt><dd>mile sourcing radius</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<hr class="seam wrap-seam">
+
+<!-- ============ RESERVE ============ -->
+<section class="section reserve" id="reserve">
+  <div class="embers" aria-hidden="true">
+    {% for s in sparks %}
+    <span class="spark" style="--x:{{ s.x }}%;--s:{{ s.size }}px;--peak:{{ s.peak }};--drift:{{ s.drift }}px;--lift:{{ s.lift }}px;--dur-s:{{ s.dur }}s;--delay:{{ s.delay }}s"></span>
+    {% endfor %}
+  </div>
+  <div class="wrap reserve-inner reveal">
+    <p class="eyebrow">A room that fills early</p>
+    <h2 class="reserve-title">Hold a place by the fire.</h2>
+    <p class="reserve-sub">Reservations open thirty days out. Walk-ins welcome at the bar for as long as the coals hold.</p>
+    <a href="{{ reserve_url }}" target="_blank" rel="noopener" class="btn btn-primary reserve-btn">Reserve on OpenTable</a>
+  </div>
+</section>
+
+<hr class="seam wrap-seam">
+
+<!-- ============ VISIT ============ -->
+<section class="section visit" id="visit">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <p class="eyebrow">Find us</p>
+      <h2 class="sec-title">Visit Cascade &amp; Coal.</h2>
+    </div>
+    <div class="visit-grid">
+      <div class="visit-col reveal" data-d="0">
+        <h3 class="visit-label mono">Address</h3>
+        <p class="visit-text">1412 East Pike Street<br>Capitol Hill, Seattle, WA 98122</p>
+        <a class="visit-link" href="https://maps.google.com/?q=1412+East+Pike+Street+Seattle+WA" target="_blank" rel="noopener">Open in Maps →</a>
+      </div>
+      <div class="visit-col reveal" data-d="1">
+        <h3 class="visit-label mono">Hours</h3>
+        <ul class="hours">
+          <li><span>Tue – Thu</span><span class="mono">5:00 – 10:00 pm</span></li>
+          <li><span>Fri – Sat</span><span class="mono">5:00 – 11:30 pm</span></li>
+          <li><span>Sunday</span><span class="mono">5:00 – 9:30 pm</span></li>
+          <li><span>Monday</span><span class="mono">Closed</span></li>
+        </ul>
+      </div>
+      <div class="visit-col reveal" data-d="2">
+        <h3 class="visit-label mono">Contact</h3>
+        <p class="visit-text">
+          <a class="visit-link" href="tel:+12065550142">(206) 555-0142</a><br>
+          <a class="visit-link" href="mailto:table@cascadeandcoal.com">table@cascadeandcoal.com</a>
+        </p>
+        <p class="visit-note">Private hearth room seats 14 — enquire by email.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap foot">
+    <a href="#top" class="wordmark foot-mark" aria-label="Cascade and Coal">
+      <svg viewBox="0 0 320 34" role="img" aria-hidden="true" height="18">
+        <text x="0" y="25" class="wm-text">CASCADE</text>
+        <text x="163" y="25" class="wm-amp">&amp;</text>
+        <text x="196" y="25" class="wm-text">COAL</text>
+      </svg>
+    </a>
+    <p class="foot-fine mono">© {{ year }} Cascade &amp; Coal · Capitol Hill, Seattle · Wood-fired since 2019</p>
+  </div>
+</section>
+
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── Loading sequence ────────────────────────────────────────
+  const loadBar     = document.getElementById('loading-bar');
+  const loadOverlay = document.getElementById('loader-overlay');
+  const heroVideo   = document.getElementById('hero-video');
+
+  let pct = 0;
+  const barTick = setInterval(() => {
+    if (pct < 70) {
+      pct += Math.random() * 13;
+      loadBar.style.width = Math.min(pct, 70) + '%';
+    }
+  }, 200);
+
+  function finishLoad() {
+    clearInterval(barTick);
+    loadBar.style.width = '100%';
+    setTimeout(() => {
+      loadBar.style.opacity = '0';
+      loadOverlay.classList.add('out');
+      // Hero entrance fires after overlay fades
+      setTimeout(() => {
+        document.querySelectorAll('.hero-el').forEach(el => el.classList.add('in'));
+      }, 180);
+    }, 340);
+  }
+
+  heroVideo.addEventListener('canplaythrough', finishLoad, {once: true});
+  setTimeout(finishLoad, 3500); // fallback
+
+  // ── Scroll hero — clip-path parallax ────────────────────────
+  const heroSticky = document.getElementById('hero-sticky');
+  const SCROLL_H   = 1500;
+  const CS0 = 25, CE0 = 75; // initial clip polygon corners
+
+  function lerp(a, b, t) { return a + (b - a) * Math.min(Math.max(t, 0), 1); }
+
+  function updateHero() {
+    const t  = window.scrollY / SCROLL_H;
+    const cs = lerp(CS0, 0,   t);
+    const ce = lerp(CE0, 100, t);
+    heroSticky.style.clipPath =
+      `polygon(${cs}% ${cs}%, ${ce}% ${cs}%, ${ce}% ${ce}%, ${cs}% ${ce}%)`;
+    // Video zoom 170% → 100%
+    const scl = lerp(1.7, 1, window.scrollY / (SCROLL_H + 500));
+    heroVideo.style.transform = `scale(${scl})`;
+  }
+
+  if (!reduce) {
+    window.addEventListener('scroll', updateHero, {passive: true});
+    updateHero();
+  }
+
+  // ── Scroll reveals ───────────────────────────────────────────
+  if (!reduce && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {rootMargin: '0px 0px -12% 0px', threshold: .12});
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+  }
+</script>
+{% endblock %}
